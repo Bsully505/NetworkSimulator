@@ -6,6 +6,7 @@
  ***************/
 import java.util.ArrayList;
 
+
 public class FloodRouter extends Router {
     // A generator for the given FloodRouter class
     public static class Generator extends Router.Generator {
@@ -20,7 +21,7 @@ public class FloodRouter extends Router {
         int dest;
         int hopCount;  // Maximum hops to get there
         Object payload;  // The payload!
-        
+
         public Packet(int source, int dest, int hopCount, Object payload) {
             this.source = source;
             this.dest = dest;
@@ -30,7 +31,7 @@ public class FloodRouter extends Router {
     }
 
     Debug debug;
-    
+
     public FloodRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
         debug = Debug.getInstance();  // For debugging!
