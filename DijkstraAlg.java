@@ -29,7 +29,7 @@ public class DijkstraAlg {
         return min_index;
     }
 
-
+// method that does the dijkstra alg. Takes in a graph and the source
     public void dijkstra(int graph[][], int src) {
 
         int dist[] = new int[V]; // The output array. dist[i] will hold
