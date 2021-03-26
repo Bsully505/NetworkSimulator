@@ -36,7 +36,7 @@ public class LinkStateRouter extends Router {
             RouterTable.put(String.valueOf(i),-1);//puts in all outgoing routes
         }
 
-        PingTest(121,new PingPacket(189,121,20000,System.currentTimeMillis()));
+
         StartTime = new Time(System.currentTimeMillis());
 
         PrintTableStats();
@@ -54,15 +54,17 @@ public class LinkStateRouter extends Router {
         // This is how we will store our Packet Header information
         int source;
         int dest;
-        int hopCount;  // Maximum hops to get there
-        Object payload;// The payload!
+        long time;  //data for time
+        boolean sendBack;
 
 
-        public PingPacket(int source, int dest, int hopCount, Object payload) {
+
+        public PingPacket(int source, int dest, long time ,boolean sendBack) {
             this.source = source;
             this.dest = dest;
-            this.hopCount = hopCount;
-            this.payload = payload;
+            this.time = time;
+            this.sendBack = sendBack;
+            //change
         }
     }
 
@@ -80,7 +82,7 @@ public class LinkStateRouter extends Router {
 
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
             if (toRoute != null) {
-                System.out.println("not null");
+              //  System.out.println("not null");
                 // There is something to route through - or it might have arrived at destination
                 process = true;
                 if (toRoute.data instanceof FloodRouter.Packet) {
@@ -101,10 +103,21 @@ public class LinkStateRouter extends Router {
                     }
                 }
                 else if (toRoute.data instanceof LinkStateRouter.PingPacket) {
-                    System.out.println("Reaches 100");
+                    //System.out.println("Reaches 100");
                     LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
                     if (p.dest == nsap) {
-                        nic.sendOnLink(toRoute.originator, toRoute);
+                        if (p.sendBack== false) {
+                            p.sendBack =true;
+                            int src = p.source;
+                            p.source = p.dest ;
+                            p.dest = src;
+                            nic.sendOnLink(src, p);
+
+                        }
+                        else{
+                            System.out.println("hits "+nic.getNSAP());
+
+                        }
                     }
                     else{
                         System.out.println("the to route data is ");
@@ -115,7 +128,7 @@ public class LinkStateRouter extends Router {
                 {
                     debug.println(0, "Error.  The packet being tranmitted is not a recognized Flood Packet.  Not processing");
                 }
-                debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
+                //debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
             }
             else{
                 //System.out.println("is null");
@@ -125,21 +138,26 @@ public class LinkStateRouter extends Router {
                 // Didn't do anything, so sleep a bit
                 try { Thread.sleep(1); } catch (InterruptedException e) { }
             }
-            if(300000 > StartTime.getTime()-System.currentTimeMillis()){
+            if(30000 > StartTime.getTime()-System.currentTimeMillis()){
                 //refresh the ping values
                 StartTime.setTime(System.currentTimeMillis());
+                for(int i: nic.getOutgoingLinks()){
+
+                    PingTest(i,new PingPacket(nic.getNSAP(),i,System.currentTimeMillis(),false));
+                }
+                //PingTest(121,new PingPacket(189,121,System.currentTimeMillis()));
             }
         }
     }
    public  void PingTest(int dest, PingPacket PP){
-        System.out.println("reaches here");
+
         //LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
        int size = outGo.size();
        for (int i = 0; i < size; i++) {
            if (outGo.get(i) == dest) {
                // Not the originator of this packet - so send it along!
-               System.out.println("something reached here");
+               //System.out.println("something reached here");
 
                nic.sendOnLink(i, PP);
            }
