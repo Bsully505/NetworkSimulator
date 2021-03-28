@@ -16,6 +16,7 @@ import java.util.Map;
 public class LinkStateRouter extends Router {
     Map<String, Integer> RouterTable;
     Time StartTime;
+    long StrTime = 0;
     // A generator for the given LinkStateRouter class
     public static class Generator extends Router.Generator {
         public Router createRouter(int id, NetworkInterface nic) {
@@ -38,6 +39,7 @@ public class LinkStateRouter extends Router {
 
 
         StartTime = new Time(System.currentTimeMillis());
+        StrTime = StartTime.getTime();
 
         PrintTableStats();
 
@@ -75,10 +77,17 @@ public class LinkStateRouter extends Router {
             boolean process = false;
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
             if (toSend != null) {
+                if (toSend.data instanceof LinkStateRouter.PingPacket) {
+                    LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toSend.data;
+
+                    System.out.println(p.sendBack);
+                }
+
                 // There is something to send out
                 process = true;
                 debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
             }
+
 
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
             if (toRoute != null) {
@@ -107,11 +116,13 @@ public class LinkStateRouter extends Router {
                     LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
                     if (p.dest == nsap) {
                         if (p.sendBack== false) {
+                            //System.out.println("reaches 110");
                             p.sendBack =true;
                             int src = p.source;
                             p.source = p.dest ;
                             p.dest = src;
-                            nic.sendOnLink(src, p);
+                            PingTest(src,p);
+                            //System.out.println(p.source + " "+ p.dest +" "+p.time);
 
                         }
                         else{
@@ -131,6 +142,7 @@ public class LinkStateRouter extends Router {
                 //debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
             }
             else{
+
                 //System.out.println("is null");
             }
 
@@ -138,9 +150,13 @@ public class LinkStateRouter extends Router {
                 // Didn't do anything, so sleep a bit
                 try { Thread.sleep(1); } catch (InterruptedException e) { }
             }
-            if(30000 > StartTime.getTime()-System.currentTimeMillis()){
+
+            if(3000 < System.currentTimeMillis()- StrTime){
+
+                //ystem.out.println(StartTime.getTime()-System.currentTimeMillis());
+                //System.out.println("running");
                 //refresh the ping values
-                StartTime.setTime(System.currentTimeMillis());
+                StrTime = System.currentTimeMillis();
                 for(int i: nic.getOutgoingLinks()){
 
                     PingTest(i,new PingPacket(nic.getNSAP(),i,System.currentTimeMillis(),false));
