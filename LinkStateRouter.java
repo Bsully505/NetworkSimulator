@@ -14,7 +14,7 @@ import java.util.Map;
 
 // testing123
 public class LinkStateRouter extends Router {
-    Map<String, Integer> RouterTable;
+    Map<Integer, Long> RouterTable;
     Time StartTime;
     long StrTime = 0;
     // A generator for the given LinkStateRouter class
@@ -29,12 +29,12 @@ public class LinkStateRouter extends Router {
     public LinkStateRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
         debug = Debug.getInstance();  // For debugging!
-        RouterTable  = new HashMap<String,Integer>();
+        RouterTable  = new HashMap<Integer,Long>();
 //        System.out.printf("this is current node %d \n", nic.getNSAP());
 //        System.out.println("The out going links are "+ nic.getOutgoingLinks().toString());
         for( int i : nic.getOutgoingLinks()){
             //send ping to get ping length to use as the key
-            RouterTable.put(String.valueOf(i),-1);//puts in all outgoing routes
+            RouterTable.put(i, (long) -1);//puts in all outgoing routes
         }
 
 
@@ -44,11 +44,9 @@ public class LinkStateRouter extends Router {
         PrintTableStats();
 
     }
-    public void PrintTableStats(){
+    public synchronized void PrintTableStats(){
         for(int i : nic.getOutgoingLinks()){
-            System.out.print("Table "+nic.getNSAP()+" Getting results for "+ i+" ");
-            System.out.println(RouterTable.get(String.valueOf(i)));
-
+            System.out.println("Table "+nic.getNSAP()+" Getting results for "+ i+" "+ RouterTable.get(i));
         }
     }
 
@@ -79,7 +77,6 @@ public class LinkStateRouter extends Router {
             if (toSend != null) {
                 if (toSend.data instanceof LinkStateRouter.PingPacket) {
                     LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toSend.data;
-
                     System.out.println(p.sendBack);
                 }
 
@@ -116,17 +113,17 @@ public class LinkStateRouter extends Router {
                     LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
                     if (p.dest == nsap) {
                         if (p.sendBack== false) {
-                            //System.out.println("reaches 110");
                             p.sendBack =true;
                             int src = p.source;
                             p.source = p.dest ;
                             p.dest = src;
                             PingTest(src,p);
-                            //System.out.println(p.source + " "+ p.dest +" "+p.time);
 
                         }
                         else{
-                            System.out.println("hits "+nic.getNSAP());
+                            long len =   System.currentTimeMillis() - p.time;
+                            long onelen = len/2;
+                            RouterTable.put(p.source, onelen);
 
                         }
                     }
@@ -143,7 +140,6 @@ public class LinkStateRouter extends Router {
             }
             else{
 
-                //System.out.println("is null");
             }
 
             if (!process) {
@@ -151,36 +147,25 @@ public class LinkStateRouter extends Router {
                 try { Thread.sleep(1); } catch (InterruptedException e) { }
             }
 
-            if(3000 < System.currentTimeMillis()- StrTime){
-
-                //ystem.out.println(StartTime.getTime()-System.currentTimeMillis());
-                //System.out.println("running");
+            if(3000 < System.currentTimeMillis()- StrTime){//every three seconds ping is sent out
                 //refresh the ping values
+
                 StrTime = System.currentTimeMillis();
                 for(int i: nic.getOutgoingLinks()){
-
                     PingTest(i,new PingPacket(nic.getNSAP(),i,System.currentTimeMillis(),false));
                 }
-                //PingTest(121,new PingPacket(189,121,System.currentTimeMillis()));
+                PrintTableStats();
             }
         }
     }
    public  void PingTest(int dest, PingPacket PP){
-
-        //LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
-       int size = outGo.size();
-       for (int i = 0; i < size; i++) {
+        int size = outGo.size();
+        for (int i = 0; i < size; i++) {
            if (outGo.get(i) == dest) {
                // Not the originator of this packet - so send it along!
-               //System.out.println("something reached here");
-
                nic.sendOnLink(i, PP);
            }
-           //long PingTime = System.currentTimeMillis();
-
-           //nic.sendOnLink(dest,new PingPacket(source,dest,20,System.currentTimeMillis()) );
-
        }
   }
 }
