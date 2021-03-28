@@ -49,7 +49,10 @@ public class FloodRouter extends Router {
             }
 
             NetworkInterface.ReceivePair toRoute = nic.getReceived();
+
             if (toRoute != null) {
+                System.out.print("toRoute is ");
+                System.out.println(toRoute);
                 // There is something to route through - or it might have arrived at destination
                 process = true;
                 if (toRoute.data instanceof Packet) {

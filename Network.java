@@ -271,8 +271,11 @@ public class Network {
                 
                 Router r = gen.createRouter(n.nsap, nic);  // Create router using the generator
                 n.r = r;                                   // Associate it with the node
-                n.r.start();                               // Start it running
+               // n.r.start();                               // Start it running
             });
+        nodes.forEach((id, n) -> {
+            n.r.start();
+        });
     }
     
     private int packetFrequency = 0;
