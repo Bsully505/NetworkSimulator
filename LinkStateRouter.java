@@ -15,8 +15,11 @@ import java.util.Map;
 // testing123
 public class LinkStateRouter extends Router {
     Map<Integer, Long> RouterTable;
+    Map<Integer, Long> DijTab;//dikja alg
     Time StartTime;
     long StrTime = 0;
+    long DijTime = 0;
+    int DijIncome = 0;
     // A generator for the given LinkStateRouter class
     public static class Generator extends Router.Generator {
         public Router createRouter(int id, NetworkInterface nic) {
@@ -35,6 +38,7 @@ public class LinkStateRouter extends Router {
         for( int i : nic.getOutgoingLinks()){
             //send ping to get ping length to use as the key
             RouterTable.put(i, (long) -1);//puts in all outgoing routes
+            DijTab.put(i,(long)-1);
         }
 
 
@@ -47,6 +51,23 @@ public class LinkStateRouter extends Router {
     public synchronized void PrintTableStats(){
         for(int i : nic.getOutgoingLinks()){
             System.out.println("Table "+nic.getNSAP()+" Getting results for "+ i+" "+ RouterTable.get(i));
+        }
+    }
+
+    public static class DijPack {
+        // This is how we will store our Packet Header information
+        int source;
+        int dest;
+        long cost;  //data for time
+
+
+
+
+        public DijPack(int source, int dest, long cost ) {
+            this.source = source;
+            this.dest = dest;
+            this.cost = cost;
+            //change
         }
     }
 
@@ -132,7 +153,22 @@ public class LinkStateRouter extends Router {
                         System.out.println(toRoute.data);
                     }
                 }
-                    else
+                    else if(toRoute.data instanceof DijPack){
+                    LinkStateRouter.DijPack p = (LinkStateRouter.DijPack) toRoute.data;
+                    //to send off either
+                    if(DijTab.get(nic.getNSAP())== -1){
+                        //send off packet to offspring
+                        DijTime = System.currentTimeMillis();
+                        DijTab.put(p.source,p.cost);
+                    }
+                    else{
+
+                    }
+                    if(DijIncome == nic.getIncomingLinks().size()|| System.currentTimeMillis()-DijTime >400){
+                        //all incoming links have arrived proceed to send
+
+                    }
+                }
                 {
                     debug.println(0, "Error.  The packet being tranmitted is not a recognized Flood Packet.  Not processing");
                 }
@@ -167,5 +203,11 @@ public class LinkStateRouter extends Router {
                nic.sendOnLink(i, PP);
            }
        }
+  }
+  public void runDik(){
+        //send off the values to the children starting with the source
+    for( int i : nic.getOutgoingLinks()){
+
+    }
   }
 }
