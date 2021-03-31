@@ -1,7 +1,7 @@
 /***************
  * DistanceVectorRouter
  * Author: Christian Duncan
- * Modified by: 
+ * Modified by: Jack Zemlanicky, Dylan Irwin
  * Represents a router that uses a Distance Vector Routing algorithm.
  * buildTable function: (screenshot)
  ***************/
@@ -15,12 +15,12 @@ public class DistanceVectorRouter extends Router {
             return new DistanceVectorRouter(id, nic);
         }
     }
-    
+
 
     Debug debug;
     HashMap<Integer,DVPair> routingMap;
     ArrayList<HashMap<Integer,DVPair>>neighborMaps;
-    
+    //private class to create our own little tuple we need for our hashmap value
     public DistanceVectorRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
         debug = Debug.getInstance();  // For debugging
@@ -31,8 +31,6 @@ public class DistanceVectorRouter extends Router {
         }
 
     }
-    //private class to create our own little tuple we need for our hashmap value
-    
 
     public void run() {
         int delay=5000;//5s delay
@@ -43,11 +41,15 @@ public class DistanceVectorRouter extends Router {
             if(currentTime > timeToRebuild){
                 timeToRebuild = currentTime + delay;
                 buildTable(nsap);
-            } 
+            }
             // See if there is anything to process
             boolean process = false;
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
             if (toSend != null) {
+                if (toSend.data instanceof DistanceVectorRouter.PingPacket) {
+                    DistanceVectorRouter.PingPacket p = (DistanceVectorRouter.PingPacket) toSend.data;
+                    System.out.println(p.sendBack);
+                }
                 // There is something to send out
                 process = true;
                 debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
@@ -63,7 +65,30 @@ public class DistanceVectorRouter extends Router {
                     DVPacket packet=(DVPacket) toRoute.data;
                     neighborMaps.set(linkIndex,packet.mapToSend);
                 }
+                else if (toRoute.data instanceof DistanceVectorRouter.PingPacket) {
+                    DistanceVectorRouter.PingPacket p = (DistanceVectorRouter.PingPacket) toRoute.data;
+                    if (p.sendBack == false) {
+                        p.sendBack =true;
+                        PingTest(toRoute.originator,p);
+                    }
+                    else {
+                        // if sendback is true, calculate distance using time table
+                        long startTime = p.time;
+                        long endTime = System.currentTimeMillis();
+                        long dist = (endTime - startTime)/2;
+                        int linkInd = nic.getOutgoingLinks().indexOf(nsap);
+                        routingMap.put(nsap, new DVPair(dist, linkInd));
+                        debug.println(3, "LinkInd(Park):"+linkInd);
+                        // Ask Duncan how to get linkIndex for its nsap
+                    }
+                }
+                else if (toRoute.data instanceof Packet) {
+
+                }
                 else{debug.println(3, "(DistanceVectorRouter.run): I am being asked to transmit: " + toRoute.originator + " data = " + toRoute.data);}
+            }
+            else {
+              debug.println(4, "Error.  The packet being tranmitted is not a recognized DistanceVector Packet.  Not processing");
             }
 
             if (!process) {
@@ -72,12 +97,15 @@ public class DistanceVectorRouter extends Router {
             }
         }
     }
-    
+
     public void buildTable(int nsap){//call this method in its own delay timer (thanks, Professor!)
         ArrayList<Integer>linkIndex=nic.getOutgoingLinks();//this gives us an arraylist of all outgoing links (their index and NSAP)
         //Use ping method Bryan and Henok made (on each outgoing link's NSAP) to get distance from this router
+        for(int i: nic.getOutgoingLinks()){
+            PingTest(i,new PingPacket(System.currentTimeMillis(),false));
+        }
         HashMap<Integer,DVPair> tempMap=new HashMap<>();//initialize temp map and add itself to it (distance=0, index=-1)
-        DVPair itself= new DVPair(0.0,-1);
+        DVPair itself= new DVPair(0,-1);
         tempMap.put(nsap,itself);
         //now, look for the map of every direct link to this router (how to do that as well?) skip this for now
         if(nsap==14){
@@ -100,20 +128,20 @@ public class DistanceVectorRouter extends Router {
             nic.sendOnLink(i, mapPacket);
         }
         //$$ My main concern is how to add to the current node's hashmap other than putting itself in there.
-        
-        
+
+
     }
     private int getLinkIndex(int nsap){
         ArrayList<Integer> outLinks= nic.getOutgoingLinks();
-        
+
         return outLinks.indexOf(nsap);
     }
-    
+
     //class to make our little tuple for the hashmap (thanks, Professor!)
-    public class DVPair { 
+    public class DVPair {
         double distance;
-        int linkIndex; 
-        public DVPair(double distance, int linkIndex) {
+        int linkIndex;
+        public DVPair(long distance, int linkIndex) {
                  this.distance = distance;
                  this.linkIndex = linkIndex;
         }
@@ -126,5 +154,51 @@ public class DistanceVectorRouter extends Router {
             this.mapToSend=mapToSend;
         }
     }
-    
+
+    public static class Packet {
+        // This is how we will store our Packet Header information
+        int source;
+        int dest;
+        Object payload;  // The payload!
+
+        public Packet(int source, int dest, Object payload) {
+            this.source = source;
+            this.dest = dest;
+            this.payload = payload;
+        }
+    }
+
+    public static class PingPacket {
+        // This is how we will store our Packet Header information
+        long time;  //data for time
+        boolean sendBack;
+
+        public PingPacket(long time, boolean sendBack) {
+            this.time = time;
+            this.sendBack = sendBack;
+        }
+    }
+
+    private void route(int linkOriginator, Packet p) {
+        ArrayList<Integer> outLinks = nic.getOutgoingLinks();
+        int size = outLinks.size();
+        for (int i = 0; i < size; i++) {
+            if (outLinks.get(i) != linkOriginator) {
+                // Not the originator of this packet - so send it along!
+                nic.sendOnLink(i, p);
+            }
+        }
+    }
+
+    public void PingTest(int dest, PingPacket PP) {
+         ArrayList<Integer> outGo = nic.getOutgoingLinks();
+         int size = outGo.size();
+         for (int i = 0; i < size; i++) {
+            if (outGo.get(i) == dest) {
+                // Not the originator of this packet - so send it along!
+                nic.sendOnLink(i, PP);
+            }
+        }
+    }
+
 }
