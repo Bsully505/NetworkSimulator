@@ -18,7 +18,7 @@ public class Debug {
     }
 
     private Debug() {
-        level = 0;  // 0, lower=less output, so this only outputs very important messages.
+        level = 3;  // 0, lower=less output, so this only outputs very important messages.
         err = System.err;
     }
 
