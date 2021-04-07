@@ -184,17 +184,11 @@ public class LinkStateRouter extends Router {
                                 p.hopcount--;
                                 for (int i : nic.getOutgoingLinks()) {
                                     if (i != og) {
-
-
                                         DijTest(i, p);
-
                                     }
                                 }
-
-
                             }
                         }
-
                     } else {
                         List<Object> temp = new ArrayList<Object>();
                         temp.add(0, 1);
@@ -205,19 +199,9 @@ public class LinkStateRouter extends Router {
                         p.from = nic.getNSAP();
                         for (int i : nic.getOutgoingLinks()) {
                             if (i != og) {
-                                if(nsap == 24){
-                                 //   System.err.print(i + " ");
-                                }
                                 DijTest(i, p);
-
                             }
                         }
-                        if(nsap == 24){
-                           // System.out.println();
-                        }
-
-
-
                     }
 
                     //debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
