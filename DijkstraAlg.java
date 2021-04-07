@@ -7,11 +7,8 @@ public class DijkstraAlg {
     // variables
 // V stand for the number of vertices
     int V = 0;
-    private static final DijkstraAlg INSTANCE = new DijkstraAlg();
     // allows us to tell the alg how many vertices there is.
-    public DijkstraAlg(){
 
-    }
     public void addValuesforDijkstraAlg(int x)
     {
 
