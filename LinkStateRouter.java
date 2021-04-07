@@ -27,7 +27,7 @@ public class LinkStateRouter extends Router {
     List<Integer> Nodes = new ArrayList<Integer>();
     Time StartTime;
     long StrTime = 0;
-    long timeDelay = 1000;
+    long timeDelay = 2000;
     long sequenceNum = 1;
 
 
@@ -108,6 +108,12 @@ public class LinkStateRouter extends Router {
             //change
         }
     }
+    public void PrintNodes(){
+        for( int i : Nodes){
+            System.out.print(i +" ");
+        }
+        System.out.println();
+    }
 
     public void run() {
         while (true) {
@@ -116,10 +122,6 @@ public class LinkStateRouter extends Router {
             boolean process = false;
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
             if (toSend != null) {
-                if (toSend.data instanceof LinkStateRouter.PingPacket) {
-                    LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toSend.data;
-                    System.out.println(p.sendBack);
-                }
 
                 // There is something to send out
                 process = true;
@@ -131,23 +133,7 @@ public class LinkStateRouter extends Router {
             if (toRoute != null) {
                 // There is something to route through - or it might have arrived at destination
                 process = true;
-                if (toRoute.data instanceof FloodRouter.Packet) {
-                    System.out.println("this is a FloodRouter");
-                    FloodRouter.Packet p = (FloodRouter.Packet) toRoute.data;
-                    if (p.dest == nsap) {
-                        // It made it!  Inform the "network" for statistics tracking purposes
-
-                        debug.println(4, "(FloodRouter.run): Packet has arrived!  Reporting to the NIC - for accounting purposes!");
-                        debug.println(6, "(FloodRouter.run): Payload: " + p.payload);
-                        nic.trackArrivals(p.payload);
-                    } else if (p.hopCount > 0) {
-                        // Still more routing to do
-                        p.hopCount--;
-                        System.err.println("not the destination");
-                    } else {
-                        debug.println(5, "Packet has too many hops.  Dropping packet from " + p.source + " to " + p.dest + " by router " + nsap);
-                    }
-                } else if (toRoute.data instanceof LinkStateRouter.PingPacket) {
+                if (toRoute.data instanceof LinkStateRouter.PingPacket) {
                     LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
                     if (p.dest == nsap) {
                         if (p.sendBack == false) {
@@ -184,11 +170,12 @@ public class LinkStateRouter extends Router {
                                 p.hopcount--;
                                 for (int i : nic.getOutgoingLinks()) {
                                     if (i != og) {
-                                        DijTest(i, p);
+                                        DijTest(i, p, og);
                                     }
                                 }
                             }
                         }
+
                     } else {
                         List<Object> temp = new ArrayList<Object>();
                         temp.add(0, 1);
@@ -199,7 +186,7 @@ public class LinkStateRouter extends Router {
                         p.from = nic.getNSAP();
                         for (int i : nic.getOutgoingLinks()) {
                             if (i != og) {
-                                DijTest(i, p);
+                                DijTest(i, p,og);
                             }
                         }
                     }
@@ -225,8 +212,8 @@ public class LinkStateRouter extends Router {
                 temp.add(1, this.RouterTable);
                 WholeTable.put(this.nsap, temp);
                 if (nic.getNSAP() == 24) {
-
-                    PrintWholeTable();
+                    PrintNodes();
+                    //PrintWholeTable();
 
 
                 }
@@ -234,11 +221,15 @@ public class LinkStateRouter extends Router {
             }
             for (int i : nic.getOutgoingLinks()) {
                 PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
-                DijPack temp = new DijPack((int) sequenceNum, nic.getNSAP(), 20, RouterTable, nic.getNSAP());
-                DijTest(i, temp);
+                DijPack temp = new DijPack((int) sequenceNum, nic.getNSAP(), 5, RouterTable, nic.getNSAP());
+                DijTest(i, temp, nsap);
                 //nic.sendOnLink(i,temp );
             }
+
             sequenceNum++;
+            if (sequenceNum > 1500){
+                sequenceNum = 1;
+            }
 
         //else{
 
@@ -258,11 +249,11 @@ public class LinkStateRouter extends Router {
             }
         }
     }
-    public  void DijTest(int dest, DijPack DP){
+    public  void DijTest(int dest, DijPack DP, int og){
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
         int size = outGo.size();
         for (int i = 0; i < size; i++) {
-            if (outGo.get(i) == dest) {
+            if (outGo.get(i) != og) {
                 // Not the originator of this packet - so send it along!
                 nic.sendOnLink(i, DP);
             }
