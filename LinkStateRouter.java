@@ -10,6 +10,13 @@
  * line 176 //need to fix this it only decreases the number does not stop sending if lower than 0
  *
  * the problem for flooding the
+ *
+ *
+ * to remember i have a int flag which only allows the ping to be tested once
+ *
+ *
+ * the reason we were having problems sending packets is because we were sending packet value nums like 11 and not the value from the arraylist
+ * a way to send one packet would be nic.sendOnLink(nic.getOutgoingLinks().indexOf(dest), packet)
  ***************/
 
 
@@ -27,8 +34,10 @@ public class LinkStateRouter extends Router {
     List<Integer> Nodes = new ArrayList<Integer>();
     Time StartTime;
     long StrTime = 0;
-    long timeDelay = 2000;
+    long timeDelay = 3000;
     long sequenceNum = 1;
+    int count;
+    int fourteencounter = 0;
 
 
 
@@ -47,16 +56,12 @@ public class LinkStateRouter extends Router {
         for( int i : nic.getOutgoingLinks()){
             //send ping to get ping length to use as the key
             RouterTable.put(i, (long) -1);//puts in all outgoing routes
-
         }
         WholeTable = new HashMap<Integer, List<Object>>();
-        //flood the network with
-
         StartTime = new Time(System.currentTimeMillis());
         StrTime = StartTime.getTime();
-
-        PrintTableStats();
-
+        int count = 0;
+        //PrintTableStats();
     }
     public synchronized void PrintTableStats(){
         for(int i : nic.getOutgoingLinks()){
@@ -108,12 +113,6 @@ public class LinkStateRouter extends Router {
             //change
         }
     }
-    public void PrintNodes(){
-        for( int i : Nodes){
-            System.out.print(i +" ");
-        }
-        System.out.println();
-    }
 
     public void run() {
         while (true) {
@@ -156,39 +155,66 @@ public class LinkStateRouter extends Router {
                 } else if (toRoute.data instanceof DijPack) {
 
                     LinkStateRouter.DijPack p = (LinkStateRouter.DijPack) toRoute.data;
+
+                    if(nsap == 24 && p.from == 14){
+                      fourteencounter++;
+                    }
+                    else if(nsap == 14&& p.from <20){
+                        System.out.println(p.from+ " "+ p.source);
+                    }
+                    if(nsap ==14){
+
+                    }
+
+                    /**
+                     * run through
+                     * it contains a previous verision of the packet
+                     * - check if both sequence nums are the same and  if they arent then take new packet and send off
+                     *
+                     */
+
                     if (WholeTable.containsKey(p.source)) {//this means that it contains the val
+                        //parseing and checking if the sequence number is the same as what is already stored
+                        if(nsap == 14 && p.source> 20){
+                            System.out.println(p.from+" to  "+p.source);
+                        }
                         int seq = Integer.parseInt(String.valueOf((WholeTable.get(p.source).get(0))));
-                        if (seq != p.sequence) {//now add it and send it off to outs
+                        if (seq < p.sequence) {//now add it and send it off to outs
                             List<Object> temp = new ArrayList<Object>();
                             temp.add(0, p.sequence);
                             temp.add(1, p.routerTableDJ);
                             WholeTable.put(p.source, temp);
-                            //now send it off to the offspring
+                            //now send it off to the outgoing links
                             int og = p.from;
-                            p.from = nic.getNSAP();
-                            if (p.hopcount > 0) {//need to fix this it only decreases the number does not stop sending if lower than 0
+                            p.from = nsap;
+                            if (p.hopcount > 0 ) {//need to fix this it only decreases the number does not stop sending if lower than 0
                                 p.hopcount--;
-                                for (int i : nic.getOutgoingLinks()) {
-                                    if (i != og) {
-                                        DijTest(i, p, og);
-                                    }
+                                if(p.source <20 && og == 14){
+                                    //sending off to 24
                                 }
+                                DijTest( p,og);
                             }
+                        }
+                        else if(p.source == 14 && nsap == 11){
+                            //System.out.println("Dupli" + p.source + " "+ p.from);
                         }
 
+
                     } else {
-                        List<Object> temp = new ArrayList<Object>();
-                        temp.add(0, 1);
-                        temp.add(1, p.routerTableDJ);
-                        WholeTable.put(p.source, temp);
-                        Nodes.add(p.source);
-                        int og = p.from;
-                        p.from = nic.getNSAP();
-                        for (int i : nic.getOutgoingLinks()) {
-                            if (i != og) {
-                                DijTest(i, p,og);
+
+                            if(p.hopcount>0) {
+                                p.hopcount--;
+                                List<Object> temp = new ArrayList<Object>();
+                                temp.add(0, 0);
+                                temp.add(1, p.routerTableDJ);
+                                WholeTable.put(p.source, temp);
+                                Nodes.add(p.source);
+                                int og = p.from;
+                                p.from = nsap;
+
+                                DijTest(p, og);
                             }
-                        }
+
                     }
 
                     //debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
@@ -204,60 +230,61 @@ public class LinkStateRouter extends Router {
             //called time delay
             if (timeDelay < System.currentTimeMillis() - StrTime) {//every three seconds ping is sent out
                 //refresh the ping values
-
                 StrTime = System.currentTimeMillis();
-
-                List<Object> temp = new ArrayList<Object>();
-                temp.add(0, 1);
-                temp.add(1, this.RouterTable);
-                WholeTable.put(this.nsap, temp);
-                if (nic.getNSAP() == 24) {
+                if(!WholeTable.containsKey(nsap)) {
+                    List<Object> temp = new ArrayList<Object>();
+                    temp.add(0, 1);
+                    temp.add(1, this.RouterTable);
+                    WholeTable.put(this.nsap, temp);
+                    Nodes.add(nsap);
+                }
+                if (nsap == 24) {
                     PrintNodes();
                     //PrintWholeTable();
-
-
+                    //PrintTableStats();
+                    System.out.println("FourteenCnt: "+ fourteencounter);
                 }
-
             }
-            for (int i : nic.getOutgoingLinks()) {
-                PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
-                DijPack temp = new DijPack((int) sequenceNum, nic.getNSAP(), 5, RouterTable, nic.getNSAP());
-                DijTest(i, temp, nsap);
-                //nic.sendOnLink(i,temp );
+            if(count == 0) {
+                for (int i : nic.getOutgoingLinks()) {
+                    PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
+                }
+                count++;
             }
-
+            DijPack temp = new DijPack((int) sequenceNum, nic.getNSAP(), 10, RouterTable, nic.getNSAP());
+            DijTest(temp, nsap);
             sequenceNum++;
             if (sequenceNum > 1500){
                 sequenceNum = 1;
             }
-
-        //else{
-
-        //}
-        //PrintTableStats();
-
         }
     }
 
     public  void PingTest(int dest, PingPacket PP){
-        ArrayList<Integer> outGo = nic.getOutgoingLinks();
-        int size = outGo.size();
-        for (int i = 0; i < size; i++) {
-            if (outGo.get(i) == dest) {
-                // Not the originator of this packet - so send it along!
-                nic.sendOnLink(i, PP);
-            }
-        }
+        int i =nic.getOutgoingLinks().indexOf(dest);
+        nic.sendOnLink(i,PP);
+
     }
-    public  void DijTest(int dest, DijPack DP, int og){
+    public void DijTest( DijPack DP, int og){
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
         int size = outGo.size();
         for (int i = 0; i < size; i++) {
-            if (outGo.get(i) != og) {
+            if (outGo.get(i) != og&& DP.source != outGo.get(i)) {
+                if(nsap == 24){
+                   // System.out.println("sending over bridge thru" + DP.source);
+                    //System.out.println("Sending from "+ DP.from + " to " +outGo.get(i) + " with source of "+ DP.source);
+                }
                 // Not the originator of this packet - so send it along!
                 nic.sendOnLink(i, DP);
             }
         }
     }
+    public synchronized void PrintNodes(){
+        for( int i : Nodes){
+            System.out.print(i +" ");
+        }
+        System.out.println();
+    }
+
 
 }
