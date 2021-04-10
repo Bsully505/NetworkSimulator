@@ -28,6 +28,7 @@ import java.util.Map;
 
 // testing123
 public class LinkStateRouter extends Router {
+    //initlaizing variables
     Map<Integer, Long> RouterTable;
     Map<Integer, Long> DijTab;//dikja alg
     Map<Integer,List<Object>> WholeTable;//the list<object> consists of the sequence number in list index 0 and the router Table inedex 1
@@ -113,10 +114,16 @@ public class LinkStateRouter extends Router {
             //change
         }
     }
-    public synchronized void doSomething(DijPack p){
-        if(nic.getNSAP() == 24 && p.from == 14){
-            fourteencounter++;
+    public void doSomething(DijPack p){
+        if(nic.getNSAP() == 24){
+            System.out.println("MUST BE 14 " + p.from);
         }
+        if(nic.getNSAP() == 24 && p.from == 14){
+            add();
+        }
+    }
+    public synchronized void add(){
+        fourteencounter++;
     }
 
     public void run() {
@@ -187,8 +194,8 @@ public class LinkStateRouter extends Router {
 
                             if (p.hopcount > 0 ) {//need to fix this it only decreases the number does not stop sending if lower than 0
                                 p.hopcount--;
-                                p.source = toRoute.originator;
-                                DijTest(p,p.from);
+                                //p.source = toRoute.originator;
+                                DijTest(p,toRoute.originator);
                             }
                         }
 
@@ -207,8 +214,8 @@ public class LinkStateRouter extends Router {
                                 if(p.source == 14){
                                     System.out.println("OG"+toRoute.originator);
                                 }
-                                p.source = toRoute.originator;
-                                DijTest(p,p.from);
+                                //p.source = toRoute.originator;
+                                DijTest(p,toRoute.originator);
                             }
 
                     }
@@ -256,12 +263,6 @@ public class LinkStateRouter extends Router {
         }
     }
 
-    public synchronized int SetFrom(DijPack DP){
-        int og = DP.from;
-        DP.from = nic.getNSAP();
-        return og;
-
-    }
 
     public  void PingTest(int dest, PingPacket PP){
         int i =nic.getOutgoingLinks().indexOf(dest);
@@ -280,7 +281,7 @@ public class LinkStateRouter extends Router {
 //        }
 
         for (int i = 0; i < size; i++) {
-            if (i != outGo.indexOf(DP.from) && outGo.indexOf(DP.source) != i) {
+            if (i != outGo.indexOf(from) && outGo.indexOf(DP.source) != i) {
                 if(nsap == 14 &&  outGo.get(i) == 24){
                   // System.out.println("14 is sending over bridge "+ DP.source);
                 }
