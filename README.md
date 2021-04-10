@@ -36,7 +36,9 @@ Individual work completed
 ------------
 
 Jack- With the help of Professor Duncan, created the buildTable method, route method and handling of routing/sending/creating different types of packets (DV packets, ping packets, normal packets)
-Dylan-
+
+Dylan- Altered and implemented Bryan and Henok's PingPacket Class/Method to work for Distance Vector Routing.
+
 Bryan-
 Henok-
 Harrison-
