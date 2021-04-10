@@ -34,7 +34,7 @@ public class LinkStateRouter extends Router {
     List<Integer> Nodes = new ArrayList<Integer>();
     Time StartTime;
     long StrTime = 0;
-    long timeDelay = 3000;
+    long timeDelay = 500;
     long sequenceNum = 1;
     int count;
     int fourteencounter = 0;
@@ -113,6 +113,11 @@ public class LinkStateRouter extends Router {
             //change
         }
     }
+    public synchronized void doSomething(DijPack p){
+        if(nic.getNSAP() == 24 && p.from == 14){
+            fourteencounter++;
+        }
+    }
 
     public void run() {
         while (true) {
@@ -156,15 +161,9 @@ public class LinkStateRouter extends Router {
 
                     LinkStateRouter.DijPack p = (LinkStateRouter.DijPack) toRoute.data;
 
-                    if(nsap == 24 && p.from == 14){
-                      fourteencounter++;
-                    }
-                    else if(nsap == 14&& p.from <20){
-                        System.out.println(p.from+ " "+ p.source);
-                    }
-                    if(nsap ==14){
+                    doSomething(p);
 
-                    }
+
 
                     /**
                      * run through
@@ -172,12 +171,12 @@ public class LinkStateRouter extends Router {
                      * - check if both sequence nums are the same and  if they arent then take new packet and send off
                      *
                      */
-
+                    if(nsap == 24 && p.source <18){
+                        System.out.println("From: "+p.from + " Source: "+ p.source);
+                    }
                     if (WholeTable.containsKey(p.source)) {//this means that it contains the val
                         //parseing and checking if the sequence number is the same as what is already stored
-                        if(nsap == 14 && p.source> 20){
-                            System.out.println(p.from+" to  "+p.source);
-                        }
+
                         int seq = Integer.parseInt(String.valueOf((WholeTable.get(p.source).get(0))));
                         if (seq < p.sequence) {//now add it and send it off to outs
                             List<Object> temp = new ArrayList<Object>();
@@ -185,19 +184,14 @@ public class LinkStateRouter extends Router {
                             temp.add(1, p.routerTableDJ);
                             WholeTable.put(p.source, temp);
                             //now send it off to the outgoing links
-                            int og = p.from;
-                            p.from = nsap;
+
                             if (p.hopcount > 0 ) {//need to fix this it only decreases the number does not stop sending if lower than 0
                                 p.hopcount--;
-                                if(p.source <20 && og == 14){
-                                    //sending off to 24
-                                }
-                                DijTest( p,og);
+                                p.source = toRoute.originator;
+                                DijTest(p,p.from);
                             }
                         }
-                        else if(p.source == 14 && nsap == 11){
-                            //System.out.println("Dupli" + p.source + " "+ p.from);
-                        }
+
 
 
                     } else {
@@ -205,14 +199,16 @@ public class LinkStateRouter extends Router {
                             if(p.hopcount>0) {
                                 p.hopcount--;
                                 List<Object> temp = new ArrayList<Object>();
-                                temp.add(0, 0);
+                                temp.add(0, p.sequence);
                                 temp.add(1, p.routerTableDJ);
                                 WholeTable.put(p.source, temp);
                                 Nodes.add(p.source);
-                                int og = p.from;
-                                p.from = nsap;
 
-                                DijTest(p, og);
+                                if(p.source == 14){
+                                    System.out.println("OG"+toRoute.originator);
+                                }
+                                p.source = toRoute.originator;
+                                DijTest(p,p.from);
                             }
 
                     }
@@ -251,13 +247,20 @@ public class LinkStateRouter extends Router {
                 }
                 count++;
             }
-            DijPack temp = new DijPack((int) sequenceNum, nic.getNSAP(), 10, RouterTable, nic.getNSAP());
-            DijTest(temp, nsap);
-            sequenceNum++;
+            DijPack temp = new DijPack((int) sequenceNum++, nic.getNSAP(), 10, RouterTable, -1);
+            DijTest(temp, -1);
+
             if (sequenceNum > 1500){
                 sequenceNum = 1;
             }
         }
+    }
+
+    public synchronized int SetFrom(DijPack DP){
+        int og = DP.from;
+        DP.from = nic.getNSAP();
+        return og;
+
     }
 
     public  void PingTest(int dest, PingPacket PP){
@@ -265,17 +268,30 @@ public class LinkStateRouter extends Router {
         nic.sendOnLink(i,PP);
 
     }
-    public void DijTest( DijPack DP, int og){
+    public void DijTest( DijPack DP, int from ){
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
         int size = outGo.size();
+
+//        if(nic.getNSAP() ==14){
+//            for(int v: outGo){
+//                System.out.print(v + " ");
+//            }
+//            System.out.println();
+//        }
+
         for (int i = 0; i < size; i++) {
-            if (outGo.get(i) != og&& DP.source != outGo.get(i)) {
-                if(nsap == 24){
-                   // System.out.println("sending over bridge thru" + DP.source);
-                    //System.out.println("Sending from "+ DP.from + " to " +outGo.get(i) + " with source of "+ DP.source);
+            if (i != outGo.indexOf(DP.from) && outGo.indexOf(DP.source) != i) {
+                if(nsap == 14 &&  outGo.get(i) == 24){
+                  // System.out.println("14 is sending over bridge "+ DP.source);
                 }
+                DP.from = nic.getNSAP();
                 // Not the originator of this packet - so send it along!
                 nic.sendOnLink(i, DP);
+            }
+            else{
+                if(nic.getNSAP() == 14){
+                   // System.out.println("I is "+ i+ " with the value of "+ outGo.get(i));
+                }
             }
         }
     }
