@@ -27,7 +27,9 @@ Breakdown of work
 We broke the work down as follows:
 
 Dylan and Jack: Handle the Distance Vector Routing algorithm
+
 Bryan and Henok: Handle the Link State Routing algorithm
+
 Harrison: Float between the two algorithms, acting as a sort of handyman for each
 
 Individual work completed
