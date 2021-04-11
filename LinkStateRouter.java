@@ -83,17 +83,26 @@ public class LinkStateRouter extends Router {
         int source;
         int hopcount;
         Map<Integer,Long> routerTableDJ;
-        int from;
 
 
-        public DijPack(int sequence, int source, int hopcount,  Map<Integer,Long> routerTableDJ, int from) {
+        public DijPack(DijPack did){
+            this.sequence = did.sequence;
+            this.source = did.source;
+            this.hopcount = did.hopcount;
+            this.routerTableDJ = did.routerTableDJ;
+
+        }
+        public DijPack(int sequence, int source, int hopcount,  Map<Integer,Long> routerTableDJ) {
             this.sequence = sequence;
             this.source = source;
             this.hopcount = hopcount;
             this.routerTableDJ =  routerTableDJ;
-            this.from = from;
 
 
+
+        }
+        public synchronized Object clone() {
+            return new DijPack(this);
         }
     }
 
@@ -113,17 +122,6 @@ public class LinkStateRouter extends Router {
             this.sendBack = sendBack;
             //change
         }
-    }
-    public void doSomething(DijPack p){
-        if(nic.getNSAP() == 24){
-            System.out.println("MUST BE 14 " + p.from);
-        }
-        if(nic.getNSAP() == 24 && p.from == 14){
-            add();
-        }
-    }
-    public synchronized void add(){
-        fourteencounter++;
     }
 
     public void run() {
@@ -165,58 +163,22 @@ public class LinkStateRouter extends Router {
                         System.out.println(toRoute.data);
                     }
                 } else if (toRoute.data instanceof DijPack) {
-
                     LinkStateRouter.DijPack p = (LinkStateRouter.DijPack) toRoute.data;
-
-                    doSomething(p);
-
-
-
-                    /**
-                     * run through
-                     * it contains a previous verision of the packet
-                     * - check if both sequence nums are the same and  if they arent then take new packet and send off
-                     *
-                     */
-                    if(nsap == 24 && p.source <18){
-                        System.out.println("From: "+p.from + " Source: "+ p.source);
-                    }
-                    if (WholeTable.containsKey(p.source)) {//this means that it contains the val
+                    if (!WholeTable.containsKey(p.source)|| (Integer)WholeTable.get(p.source).get(0)< p.sequence) {//this means that it contains the val
                         //parseing and checking if the sequence number is the same as what is already stored
-
-                        int seq = (Integer) (WholeTable.get(p.source).get(0));
-                        if (seq < p.sequence) {//now add it and send it off to outs
-                            List<Object> temp = new ArrayList<Object>();
-                            temp.add(0, p.sequence);
-                            temp.add(1, p.routerTableDJ);
-                            WholeTable.put(p.source, temp);
-                            //now send it off to the outgoing links
-
-                            if (p.hopcount > 0 ) {//need to fix this it only decreases the number does not stop sending if lower than 0
-                                p.hopcount--;
-                                p.source = toRoute.originator;
-                                DijTest(p,toRoute.originator);
-                            }
+                        List<Object> temp = new ArrayList<Object>();
+                        temp.add(0, p.sequence);
+                        temp.add(1, p.routerTableDJ);
+                        WholeTable.put(p.source, temp);
+                        //now send it off to the outgoing links
+                        if (!Nodes.contains(p.source)) {
+                            Nodes.add(p.source);
+                        }
+                        if (p.hopcount > 0) {//need to fix this it only decreases the number does not stop sending if lower than 0
+                            p.hopcount--;
+                            DijTest(p);
                         }
 
-
-
-                    } else {
-
-                            if(p.hopcount>0) {
-                                p.hopcount--;
-                                List<Object> temp = new ArrayList<Object>();
-                                temp.add(0, p.sequence);
-                                temp.add(1, p.routerTableDJ);
-                                WholeTable.put(p.source, temp);
-                                Nodes.add(p.source);
-
-                                if(p.source == 14){
-                                    System.out.println("OG"+toRoute.originator);
-                                }
-                                p.source = toRoute.originator;
-                                DijTest(p,toRoute.originator);
-                            }
 
                     }
 
@@ -245,7 +207,7 @@ public class LinkStateRouter extends Router {
                     PrintNodes();
                     //PrintWholeTable();
                     //PrintTableStats();
-                    System.out.println("FourteenCnt: "+ fourteencounter);
+                    //System.out.println("FourteenCnt: "+ fourteencounter);
                 }
             }
             if(count == 0) {
@@ -254,8 +216,8 @@ public class LinkStateRouter extends Router {
                 }
                 count++;
             }
-            DijPack temp = new DijPack((int) sequenceNum++, nic.getNSAP(), 10, RouterTable, -1);
-            DijTest(temp, -1);
+            DijPack temp = new DijPack((int) sequenceNum++, nic.getNSAP(), 15, RouterTable);
+            DijTest(temp);
 
             if (sequenceNum > 1500){
                 sequenceNum = 1;
@@ -269,32 +231,12 @@ public class LinkStateRouter extends Router {
         nic.sendOnLink(i,PP);
 
     }
-    public void DijTest( DijPack DP, int from ){
+    public void DijTest( DijPack DP ){
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
         int size = outGo.size();
-
-//        if(nic.getNSAP() ==14){
-//            for(int v: outGo){
-//                System.out.print(v + " ");
-//            }
-//            System.out.println();
-//        }
-
         for (int i = 0; i < size; i++) {
-            if (i != outGo.indexOf(from) && outGo.indexOf(DP.source) != i) {
-                if(nsap == 14 &&  outGo.get(i) == 24){
-                  // System.out.println("14 is sending over bridge "+ DP.source);
-                }
-                DP.from = nic.getNSAP();
-                // Not the originator of this packet - so send it along!
-                nic.sendOnLink(i, DP);
+                nic.sendOnLink(i, (DijPack) DP.clone());
             }
-            else{
-                if(nic.getNSAP() == 14){
-                   // System.out.println("I is "+ i+ " with the value of "+ outGo.get(i));
-                }
-            }
-        }
     }
     public synchronized void PrintNodes(){
         for( int i : Nodes){
