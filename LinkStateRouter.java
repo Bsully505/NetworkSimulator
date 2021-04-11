@@ -184,7 +184,7 @@ public class LinkStateRouter extends Router {
                     if (WholeTable.containsKey(p.source)) {//this means that it contains the val
                         //parseing and checking if the sequence number is the same as what is already stored
 
-                        int seq = Integer.parseInt(String.valueOf((WholeTable.get(p.source).get(0))));
+                        int seq = (Integer) (WholeTable.get(p.source).get(0));
                         if (seq < p.sequence) {//now add it and send it off to outs
                             List<Object> temp = new ArrayList<Object>();
                             temp.add(0, p.sequence);
@@ -194,7 +194,7 @@ public class LinkStateRouter extends Router {
 
                             if (p.hopcount > 0 ) {//need to fix this it only decreases the number does not stop sending if lower than 0
                                 p.hopcount--;
-                                //p.source = toRoute.originator;
+                                p.source = toRoute.originator;
                                 DijTest(p,toRoute.originator);
                             }
                         }
@@ -214,7 +214,7 @@ public class LinkStateRouter extends Router {
                                 if(p.source == 14){
                                     System.out.println("OG"+toRoute.originator);
                                 }
-                                //p.source = toRoute.originator;
+                                p.source = toRoute.originator;
                                 DijTest(p,toRoute.originator);
                             }
 
