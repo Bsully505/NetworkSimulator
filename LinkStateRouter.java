@@ -77,7 +77,7 @@ public class LinkStateRouter extends Router {
         System.out.println(" END of KEY SET");
     }
 
-    public static class DijPack {
+    public class DijPack {
         // This is how we will store our Packet Header information
         int sequence;
         int source;
@@ -175,11 +175,17 @@ public class LinkStateRouter extends Router {
                             Nodes.add(p.source);
                         }
                         if (p.hopcount > 0) {//need to fix this it only decreases the number does not stop sending if lower than 0
-                            p.hopcount--;
+                            p.hopcount = p.hopcount -1;
                             DijTest(p);
+                        }
+                        else{
+                            //System.out.println("the hopcount took it out");
                         }
 
 
+                    }
+                    else{
+                       // System.out.println("A packet has died");
                     }
 
                     //debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
@@ -196,13 +202,16 @@ public class LinkStateRouter extends Router {
             if (timeDelay < System.currentTimeMillis() - StrTime) {//every three seconds ping is sent out
                 //refresh the ping values
                 StrTime = System.currentTimeMillis();
-                if(!WholeTable.containsKey(nsap)) {
+
                     List<Object> temp = new ArrayList<Object>();
                     temp.add(0, 1);
                     temp.add(1, this.RouterTable);
-                    WholeTable.put(this.nsap, temp);
-                    Nodes.add(nsap);
-                }
+                    WholeTable.put(nic.getNSAP(), temp);
+                    if(!Nodes.contains(nic.getNSAP())){
+                        Nodes.add(nic.getNSAP());
+                    }
+
+
                 if (nsap == 24) {
                     PrintNodes();
                     //PrintWholeTable();
@@ -216,8 +225,7 @@ public class LinkStateRouter extends Router {
                 }
                 count++;
             }
-            DijPack temp = new DijPack((int) sequenceNum++, nic.getNSAP(), 15, RouterTable);
-            DijTest(temp);
+            DijTest(new DijPack((int) sequenceNum++, nic.getNSAP(), 6, RouterTable));
 
             if (sequenceNum > 1500){
                 sequenceNum = 1;
@@ -235,7 +243,7 @@ public class LinkStateRouter extends Router {
         ArrayList<Integer> outGo = nic.getOutgoingLinks();
         int size = outGo.size();
         for (int i = 0; i < size; i++) {
-                nic.sendOnLink(i, (DijPack) DP.clone());
+                nic.sendOnLink(i,(DijPack)(DP.clone()));
             }
     }
     public synchronized void PrintNodes(){
