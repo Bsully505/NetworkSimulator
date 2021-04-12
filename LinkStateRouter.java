@@ -21,10 +21,7 @@
 
 
 import java.sql.Time;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 // testing123
 public class LinkStateRouter extends Router {
@@ -222,13 +219,12 @@ public class LinkStateRouter extends Router {
                     //PrintTableStats();
                     //System.out.println("FourteenCnt: "+ fourteencounter);
                 }
-            }
-            if(count == 0) {
                 for (int i : nic.getOutgoingLinks()) {
                     PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
                 }
-                count++;
             }
+
+
 
             // if (sequenceNum > 1500){
             //     sequenceNum = 1;
@@ -254,6 +250,25 @@ public class LinkStateRouter extends Router {
             System.out.print(i +" ");
         }
         System.out.println();
+    }
+    public int[][] create2dGraph(){
+        int[] nodes = new int[Nodes.toArray().length];
+
+        Object[] no = (Nodes.toArray());
+        for(int i = 0 ;i<no.length;i++){
+            nodes[i] = (Integer) no[i];
+        }
+        Arrays.sort(nodes);
+        int[][] graph = new int[nodes.length][nodes.length];
+        for(int i =0;i<nodes.length;i++){
+            Collection<Integer> neighbours = ((HashMap) (WholeTable.get(i).get(1))).values();
+            for(int v: neighbours){
+                int val = Arrays.asList(nodes).indexOf(v);
+                graph[i][val] = (Integer)((HashMap) (WholeTable.get(i).get(1))).get(val);
+            }
+        }
+
+        return graph;
     }
 
 
