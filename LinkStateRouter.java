@@ -32,7 +32,7 @@ public class LinkStateRouter extends Router {
     List<Integer> Nodes = new ArrayList<Integer>();
     Time StartTime;
     long StrTime = 0;
-    long timeDelay = 5000;
+    long timeDelay = 3000;
     int sequenceNum = 1;
     int count;
     int fourteencounter = 0;
@@ -201,6 +201,7 @@ public class LinkStateRouter extends Router {
             //called time delay
             if (timeDelay < System.currentTimeMillis() - StrTime) {//every three seconds ping is sent out
                 //refresh the ping values
+                count++;
                 StrTime = System.currentTimeMillis();
 
                 List<Object> temp = new ArrayList<Object>();
@@ -213,7 +214,7 @@ public class LinkStateRouter extends Router {
 
                 DijTest(new DijPack((int) sequenceNum++, nic.getNSAP(), 20, RouterTable));
 
-                if (nsap == 24) {
+                if (nsap == 11) {
                     PrintNodes();
                     //PrintWholeTable();
                     //PrintTableStats();
@@ -221,6 +222,26 @@ public class LinkStateRouter extends Router {
                 }
                 for (int i : nic.getOutgoingLinks()) {
                     PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
+                }
+                if(count > 2){
+                    Integer[] NodeFin = new Integer[Nodes.size()];
+                    Integer[] fin = Nodes.toArray(NodeFin);
+                    int[][] graph = create2dGraph(fin);
+                    if(nic.getNSAP()==24){
+//                    for(int i =0;i<graph.length; i++){
+//                        for(int j= 0; j< graph[i].length;j++){
+//                            System.out.print(graph[i][j]+ " ");
+//                        }
+//                        System.out.println();
+//                    }
+                  }
+                        Collections.sort(Nodes);
+                        DijkstraAlg.addValuesforDijkstraAlg(18);
+                    if(nic.getNSAP()==24) {
+                        DijkstraAlg.dijkstra(graph, Nodes.indexOf(24));
+                    }
+
+
                 }
             }
 
@@ -251,20 +272,20 @@ public class LinkStateRouter extends Router {
         }
         System.out.println();
     }
-    public int[][] create2dGraph(){
-        int[] nodes = new int[Nodes.toArray().length];
-
-        Object[] no = (Nodes.toArray());
-        for(int i = 0 ;i<no.length;i++){
-            nodes[i] = (Integer) no[i];
-        }
+    public synchronized int[][] create2dGraph(Integer[] Nodes){
+        Integer[] nodes =Nodes;
+//        for(int z : nodes){
+//            System.out.print(" "+(int)z);
+//        }
+//        System.out.println();
         Arrays.sort(nodes);
         int[][] graph = new int[nodes.length][nodes.length];
         for(int i =0;i<nodes.length;i++){
-            Collection<Integer> neighbours = ((HashMap) (WholeTable.get(i).get(1))).values();
+            Collection<Integer> neighbours = ((HashMap) (WholeTable.get(nodes[i]).get(1))).keySet();
             for(int v: neighbours){
+
                 int val = Arrays.asList(nodes).indexOf(v);
-                graph[i][val] = (Integer)((HashMap) (WholeTable.get(i).get(1))).get(val);
+                graph[i][val] =((Long) ((HashMap) (WholeTable.get(nodes[i]).get(1))).get(v)).intValue();
             }
         }
 
