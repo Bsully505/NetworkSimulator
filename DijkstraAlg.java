@@ -56,6 +56,7 @@ public class DijkstraAlg {
             // not yet processed. u is always equal to src in first
             // iteration.
             int u = minDistance(dist, sptSet);
+            System.out.println("the shortest for this is "+u+ " for "+ dist[u]);
 
             // Mark the picked vertex as processed
             sptSet[u] = true;
@@ -83,7 +84,7 @@ public class DijkstraAlg {
             System.out.println(i + " \t\t " + dist[i]);
     }
 
-    ;
+
 
 
 }
