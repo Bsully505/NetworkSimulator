@@ -66,18 +66,6 @@ public class LinkStateRouter extends Router {
         int count = 0;
         //PrintTableStats();
     }
-    public synchronized void PrintTableStats(){
-        for(int i : nic.getOutgoingLinks()){
-            System.out.println("Table "+nic.getNSAP()+" Getting results for "+ i+" "+ RouterTable.get(i));
-        }
-    }
-    public synchronized void PrintWholeTable(){
-        System.out.println(" Start of Key Set");
-        for(int i : WholeTable.keySet()){
-            System.out.println(i);
-        }
-        System.out.println(" END of KEY SET");
-    }
     public static class Packet {
         // This is how we will store our Packet Header information
         int source;
@@ -149,7 +137,6 @@ public class LinkStateRouter extends Router {
             if (toSend != null && ratTab.size() == 18) {//will only send when the routing table is finished
 
                 LinkStateRouter.Packet P = new LinkStateRouter.Packet(nic.getNSAP(), toSend.destination, 17, toSend.data);
-                System.out.println(P.dest);
                 int to = ratTab.get(P.dest);
                 if(to == -1){
                     nic.sendOnLink(nic.getOutgoingLinks().indexOf(P.dest),P);
@@ -223,17 +210,7 @@ public class LinkStateRouter extends Router {
                             p.hopcount = p.hopcount -1;
                             DijTest(p);
                         }
-                        else{
-                            //System.out.println("the hopcount took it out");
-                        }
-
-
                     }
-                    else{
-                        // System.out.println("A packet has died");
-                    }
-
-                    //debug.println(3, "(LinkStateRouter.run): I am being asked to transmit: " + toSend.data + " to the destination: " + toSend.destination);
                 }
             }
             if (!process) {
@@ -257,50 +234,17 @@ public class LinkStateRouter extends Router {
                 if(!Nodes.contains(nic.getNSAP())){
                     Nodes.add(nic.getNSAP());
                 }
-
                 DijTest(new DijPack((int) sequenceNum++, nic.getNSAP(), 20, RouterTable));
-
-                if (nsap == 11) {
-                    PrintNodes();
-                    //PrintWholeTable();
-                    //PrintTableStats();
-                    //System.out.println("FourteenCnt: "+ fourteencounter);
-                }
                 for (int i : nic.getOutgoingLinks()) {
                     PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
                 }
                 if(count > 1){
                     Integer[] NodeFin = new Integer[Nodes.size()];
                     Integer[] fin = Nodes.toArray(NodeFin);
-                    //int[][] graph = create2dGraph(fin);
-
                         FindRoutes(fin);
-
-
-                    if(nic.getNSAP()==24){
-//                    for(int i =0;i<graph.length; i++){
-//                        for(int j= 0; j< graph[i].length;j++){
-//                            System.out.print(graph[i][j]+ " ");
-//                        }
-//                        System.out.println()
-//                    }
-                  }
                         Collections.sort(Nodes);
-
-                       // DijkstraAlg.addValuesforDijkstraAlg(18);
-                    //if(nic.getNSAP()==25) {
-                       // DijkstraAlg.dijkstra(graph, Nodes.indexOf(25));
-                    //}
-
-
                 }
             }
-
-
-
-            // if (sequenceNum > 1500){
-            //     sequenceNum = 1;
-            // }
         }
     }
 
@@ -321,9 +265,7 @@ public class LinkStateRouter extends Router {
                 if (workingDistance.get(i)<min){
                     min = workingDistance.get(i);
                     index = i;
-
                 }
-
             }
             finalDistance.put(index, workingDistance.get(index));
             finalLink.put(index, workingLink.get(index));
@@ -344,28 +286,13 @@ public class LinkStateRouter extends Router {
                                 workingLink.put(z,nic.getOutgoingLinks().indexOf(val));
                             }
                    }
-
-
                 }
-
-
             }
         }
         ratTab = finalLink;
-        System.out.println("going into  block");
         fixRatTap();
-        System.out.println("Passes block");
 
     }
-
-    public void PrintRatTab(){
-        System.out.println("Dest \t\t  UseIndex");
-        for(int z :ratTab.keySet()){
-            System.out.println(z+"\t\t"+ratTab.get(z));
-        }
-    }
-
-
     public  void PingTest(int dest, PingPacket PP){
         int i =nic.getOutgoingLinks().indexOf(dest);
         nic.sendOnLink(i,PP);
@@ -378,29 +305,17 @@ public class LinkStateRouter extends Router {
             nic.sendOnLink(i,(DijPack)(DP.clone()));
         }
     }
-    public synchronized void PrintNodes(){
-        for( int i : Nodes){
-            System.out.print(i +" ");
-        }
-        System.out.println();
-    }
     public synchronized int[][] create2dGraph(Integer[] Nodes){
         Integer[] nodes =Nodes;
-//        for(int z : nodes){
-//            System.out.print(" "+(int)z);
-//        }
-//        System.out.println();
         Arrays.sort(nodes);
         int[][] graph = new int[nodes.length][nodes.length];
         for(int i =0;i<nodes.length;i++){
             Collection<Integer> neighbours = ((HashMap) (WholeTable.get(nodes[i]).get(1))).keySet();
             for(int v: neighbours){
-
                 int val = Arrays.asList(nodes).indexOf(v);
                 graph[i][val] =((Long) ((HashMap) (WholeTable.get(nodes[i]).get(1))).get(v)).intValue();
             }
         }
-
         return graph;
     }
     public void fixRatTap(){
@@ -411,13 +326,8 @@ public class LinkStateRouter extends Router {
                 if (!nic.getOutgoingLinks().contains(ratTab.get(i))&&ratTab.get(i)!=-1){
                     ratTab.put(i,ratTab.get(ratTab.get(i)));
                     flag = true;
-
                 }
-
             }
         }
-        PrintRatTab();
     }
-
-
 }
