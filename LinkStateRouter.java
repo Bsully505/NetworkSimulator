@@ -11,12 +11,8 @@
  *
  * the problem for flooding the
  *
+ * to remember i have a int flag which
  *
- * to remember i have a int flag which only allows the ping to be tested once
- *
- *
- * the reason we were having problems sending packets is because we were sending packet value nums like 11 and not the value from the arraylist
- * a way to send one packet would be nic.sendOnLink(nic.getOutgoingLinks().indexOf(dest), packet)
  ***************/
 
 
@@ -26,16 +22,20 @@ import java.util.*;
 // testing123
 public class LinkStateRouter extends Router {
     //initlaizing variables
+    Map<Integer,Integer> ratTab;
     Map<Integer, Long> RouterTable;
     Map<Integer, Long> DijTab;//dikja alg
     Map<Integer,List<Object>> WholeTable;//the list<object> consists of the sequence number in list index 0 and the router Table inedex 1
     List<Integer> Nodes = new ArrayList<Integer>();
+
+
     Time StartTime;
     long StrTime = 0;
-    long timeDelay = 3000;
+    long timeDelay = 900;
     int sequenceNum = 1;
     int count;
-    int fourteencounter = 0;
+    public boolean firstRound;
+
 
 
 
@@ -49,8 +49,13 @@ public class LinkStateRouter extends Router {
 
     public LinkStateRouter(int nsap, NetworkInterface nic) {
         super(nsap, nic);
+        ratTab = new HashMap<>();
         debug = Debug.getInstance();  // For debugging!
         RouterTable  = new HashMap<Integer,Long>();
+        firstRound = true;
+
+        //workingLink.put(nsap,-1);
+        //workingDistance.put(nsap, 0);
         for( int i : nic.getOutgoingLinks()){
             //send ping to get ping length to use as the key
             RouterTable.put(i, (long) -1);//puts in all outgoing routes
@@ -72,6 +77,20 @@ public class LinkStateRouter extends Router {
             System.out.println(i);
         }
         System.out.println(" END of KEY SET");
+    }
+    public static class Packet {
+        // This is how we will store our Packet Header information
+        int source;
+        int dest;
+        int hopCount;  // Maximum hops to get there
+        Object payload;  // The payload!
+
+        public Packet(int source, int dest, int hopCount, Object payload) {
+            this.source = source;
+            this.dest = dest;
+            this.hopCount = hopCount;
+            this.payload = payload;
+        }
     }
 
     public class DijPack {
@@ -127,7 +146,18 @@ public class LinkStateRouter extends Router {
             // See if there is anything to process
             boolean process = false;
             NetworkInterface.TransmitPair toSend = nic.getTransmit();
-            if (toSend != null) {
+            if (toSend != null && ratTab.size() == 18) {//will only send when the routing table is finished
+
+                LinkStateRouter.Packet P = new LinkStateRouter.Packet(nic.getNSAP(), toSend.destination, 17, toSend.data);
+                System.out.println(P.dest);
+                int to = ratTab.get(P.dest);
+                if(to == -1){
+                    nic.sendOnLink(nic.getOutgoingLinks().indexOf(P.dest),P);
+                }
+                else{
+                    nic.sendOnLink(nic.getOutgoingLinks().indexOf(to),P);
+                }
+
 
                 // There is something to send out
                 process = true;
@@ -139,7 +169,22 @@ public class LinkStateRouter extends Router {
             if (toRoute != null) {
                 // There is something to route through - or it might have arrived at destination
                 process = true;
-                if (toRoute.data instanceof LinkStateRouter.PingPacket) {
+                if( toRoute.data instanceof LinkStateRouter.Packet){
+
+
+                    LinkStateRouter.Packet p = (LinkStateRouter.Packet) toRoute.data;
+                    if(p.dest == nsap){
+                        nic.trackArrivals(p.payload);
+                    }
+                    int to = ratTab.get(p.dest);
+                    if(to == -1){
+                        nic.sendOnLink(nic.getOutgoingLinks().indexOf(p.dest),p);
+                    }
+                    else{
+                        nic.sendOnLink(nic.getOutgoingLinks().indexOf(to),p);
+                    }
+                }
+                else if (toRoute.data instanceof LinkStateRouter.PingPacket) {
                     LinkStateRouter.PingPacket p = (LinkStateRouter.PingPacket) toRoute.data;
                     if (p.dest == nsap) {
                         if (p.sendBack == false) {
@@ -199,7 +244,8 @@ public class LinkStateRouter extends Router {
                 }
             }
             //called time delay
-            if (timeDelay < System.currentTimeMillis() - StrTime) {//every three seconds ping is sent out
+            if (timeDelay < System.currentTimeMillis() - StrTime||firstRound == true) {//every three seconds ping is sent out
+                firstRound = false;
                 //refresh the ping values
                 count++;
                 StrTime = System.currentTimeMillis();
@@ -223,10 +269,14 @@ public class LinkStateRouter extends Router {
                 for (int i : nic.getOutgoingLinks()) {
                     PingTest(i, new PingPacket(nic.getNSAP(), i, System.currentTimeMillis(), false));
                 }
-                if(count > 2){
+                if(count > 1){
                     Integer[] NodeFin = new Integer[Nodes.size()];
                     Integer[] fin = Nodes.toArray(NodeFin);
-                    int[][] graph = create2dGraph(fin);
+                    //int[][] graph = create2dGraph(fin);
+
+                        FindRoutes(fin);
+
+
                     if(nic.getNSAP()==24){
 //                    for(int i =0;i<graph.length; i++){
 //                        for(int j= 0; j< graph[i].length;j++){
@@ -236,10 +286,11 @@ public class LinkStateRouter extends Router {
 //                    }
                   }
                         Collections.sort(Nodes);
-                        DijkstraAlg.addValuesforDijkstraAlg(18);
-                    if(nic.getNSAP()==24) {
-                        DijkstraAlg.dijkstra(graph, Nodes.indexOf(24));
-                    }
+
+                       // DijkstraAlg.addValuesforDijkstraAlg(18);
+                    //if(nic.getNSAP()==25) {
+                       // DijkstraAlg.dijkstra(graph, Nodes.indexOf(25));
+                    //}
 
 
                 }
@@ -250,6 +301,67 @@ public class LinkStateRouter extends Router {
             // if (sequenceNum > 1500){
             //     sequenceNum = 1;
             // }
+        }
+    }
+
+    public void  FindRoutes(Integer[] Nodes){
+        HashMap <Integer,Integer> finalLink = new HashMap();
+        HashMap<Integer, Integer> finalDistance = new HashMap();
+        HashMap<Integer,Integer> workingLink = new HashMap();
+        HashMap<Integer,Integer> workingDistance = new HashMap();
+
+        workingDistance.put(nic.getNSAP(), 0);
+        workingLink.put(nic.getNSAP(),-1);
+        int[][] graph = create2dGraph(Nodes);
+        while(!workingDistance.isEmpty()){
+            int min = Integer.MAX_VALUE;
+            int index = -1;
+            Collection<Integer> Keys = workingDistance.keySet();
+            for(int i : Keys){
+                if (workingDistance.get(i)<min){
+                    min = workingDistance.get(i);
+                    index = i;
+
+                }
+
+            }
+            finalDistance.put(index, workingDistance.get(index));
+            finalLink.put(index, workingLink.get(index));
+            workingDistance.remove(index);
+            workingLink.remove(index);
+            HashMap neighbours =  (HashMap) WholeTable.get(index).get(1);
+            Collection<Integer> nei = neighbours.keySet();
+            for(int z: nei){//getting all of the neighbours distances
+                int val = ((Long) neighbours.get(z)).intValue();
+                if(!finalDistance.containsKey(z)){
+                   Long newDistnace = min + (Long)neighbours.get(z);
+                   if(!workingDistance.containsKey(z)|| newDistnace< workingDistance.get(z)){
+                            workingDistance.put(z,((Long) newDistnace).intValue());
+                            if(min!= -1){
+                                workingLink.put(z,index);
+                            }
+                            else{
+                                workingLink.put(z,nic.getOutgoingLinks().indexOf(val));
+                            }
+                   }
+
+
+                }
+
+
+            }
+        }
+        ratTab = finalLink;
+        System.out.println("going into  block");
+        fixRatTap();
+        System.out.println("Passes block");
+
+    }
+
+    public void PrintRatTab(){
+        System.out.println("Dest \t\t  UseIndex");
+        for(int z :ratTab.keySet()){
+            System.out.println(z+"\t\t"+ratTab.get(z));
         }
     }
 
@@ -290,6 +402,21 @@ public class LinkStateRouter extends Router {
         }
 
         return graph;
+    }
+    public void fixRatTap(){
+        boolean flag = true;
+        while(flag == true){
+            flag = false;
+            for(int i :ratTab.keySet()) {
+                if (!nic.getOutgoingLinks().contains(ratTab.get(i))&&ratTab.get(i)!=-1){
+                    ratTab.put(i,ratTab.get(ratTab.get(i)));
+                    flag = true;
+
+                }
+
+            }
+        }
+        PrintRatTab();
     }
 
 
