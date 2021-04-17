@@ -39,8 +39,8 @@ Jack- With the help of Professor Duncan, created the buildTable method, route me
 
 Dylan- Altered and implemented Bryan and Henok's PingPacket Class/Method to work for Distance Vector Routing.
 
-Bryan- Worked on LinkStateRouter with Henok and created WholeTable method, and used PingTest to check the time between each router. Then have Dijtest flood the whole network so each table can create the topology of the network.
+Bryan- Worked on LinkStateRouter with Henok and created WholeTable method, and used PingTest to check the time between each router. Then have Dijtest flood the whole network so each table can create the topology of the network.  
 
-Henok- Worked on LinkStateRouter with Bryan and created WholeTable method, and used PingTest to check the time between each router. Then have Dijtest flood the whole network so each table can create the topology of the network.
+Henok- Worked on LinkStateRouter with Bryan and created WholeTable method, and used PingTest to check the time between each router. Then have Dijtest flood the whole network so each table can create the topology of the network. 
 
-Harrison- Worked on implementing Dijkstra's algorithm and converted the wholeTable Hashmap to a 2D Array to run the algorithm.
+Harrison- Worked on implementing Dijkstra's algorithm and converted the wholeTable Hashmap to a 2D Array to run the algorithm. 

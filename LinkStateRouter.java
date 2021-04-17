@@ -1,7 +1,7 @@
 /***************
  * LinkStateRouter
  * Author: Christian Duncan
- * Modified by:
+ * Modified by: Bryan Sullivan and Henok Ketsela
  * Represents a router that uses a Distance Vector Routing algorithm.
  *
  *
@@ -80,7 +80,7 @@ public class LinkStateRouter extends Router {
             this.payload = payload;
         }
     }
-
+    // each router sends info of it's neighbors
     public class DijPack {
         // This is how we will store our Packet Header information
         int sequence;
@@ -110,6 +110,7 @@ public class LinkStateRouter extends Router {
         }
     }
 
+    // class for to get ping time between routers
     public static class PingPacket {
         // This is how we will store our Packet Header information
         int source;
@@ -247,7 +248,7 @@ public class LinkStateRouter extends Router {
             }
         }
     }
-
+    // uses Dijkstra's Algo to construct final table
     public void  FindRoutes(Integer[] Nodes){
         HashMap <Integer,Integer> finalLink = new HashMap();
         HashMap<Integer, Integer> finalDistance = new HashMap();
@@ -305,6 +306,8 @@ public class LinkStateRouter extends Router {
             nic.sendOnLink(i,(DijPack)(DP.clone()));
         }
     }
+
+    // converts Wholetable hasmap to 2D array for Dijkstra's algorithm
     public synchronized int[][] create2dGraph(Integer[] Nodes){
         Integer[] nodes =Nodes;
         Arrays.sort(nodes);
@@ -318,6 +321,8 @@ public class LinkStateRouter extends Router {
         }
         return graph;
     }
+
+    // bulids a table with the router that it is sending to next
     public void fixRatTap(){
         boolean flag = true;
         while(flag == true){

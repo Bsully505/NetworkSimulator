@@ -18,7 +18,8 @@ public class Main {
 
         net.printNetwork(System.out);
         //net.createRouters(new FloodRouter.Generator());
-        net.createRouters(new LinkStateRouter.Generator());
+        //net.createRouters(new LinkStateRouter.Generator());
+        net.createRouters(new DistanceVectorRouter.Generator());
         
         try {
             net.runNetwork(System.out, 10000, 100);
