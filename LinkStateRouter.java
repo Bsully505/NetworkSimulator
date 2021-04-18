@@ -2,41 +2,28 @@
  * LinkStateRouter
  * Author: Christian Duncan
  * Modified by: Bryan Sullivan and Henok Ketsela
- * Represents a router that uses a Distance Vector Routing algorithm.
- *
- *
- * to fix
- * being able to send a packet without using the pingTest or dijtest
- * line 176 //need to fix this it only decreases the number does not stop sending if lower than 0
- *
- * the problem for flooding the
- *
- * to remember i have a int flag which
- *
+ * Represents a router that uses a Link State Routing algorithm.
  ***************/
 
 
 import java.sql.Time;
 import java.util.*;
 
-// testing123
 public class LinkStateRouter extends Router {
     //initlaizing variables
     Map<Integer,Integer> ratTab;
     Map<Integer, Long> RouterTable;
     Map<Integer, Long> DijTab;//dikja alg
     Map<Integer,List<Object>> WholeTable;//the list<object> consists of the sequence number in list index 0 and the router Table inedex 1
-    List<Integer> Nodes = new ArrayList<Integer>();
+    List<Integer> Nodes = new ArrayList<>();
 
 
     Time StartTime;
-    long StrTime = 0;
+    long StrTime;
     long timeDelay = 900;
     int sequenceNum = 1;
     int count;
     public boolean firstRound;
-
-
 
 
     // A generator for the given LinkStateRouter class
@@ -51,7 +38,7 @@ public class LinkStateRouter extends Router {
         super(nsap, nic);
         ratTab = new HashMap<>();
         debug = Debug.getInstance();  // For debugging!
-        RouterTable  = new HashMap<Integer,Long>();
+        RouterTable  = new HashMap<>();
         firstRound = true;
 
         //workingLink.put(nsap,-1);
@@ -60,10 +47,9 @@ public class LinkStateRouter extends Router {
             //send ping to get ping length to use as the key
             RouterTable.put(i, (long) -1);//puts in all outgoing routes
         }
-        WholeTable = new HashMap<Integer, List<Object>>();
+        WholeTable = new HashMap<>();
         StartTime = new Time(System.currentTimeMillis());
         StrTime = StartTime.getTime();
-        int count = 0;
         //PrintTableStats();
     }
     public static class Packet {
@@ -257,7 +243,6 @@ public class LinkStateRouter extends Router {
 
         workingDistance.put(nic.getNSAP(), 0);
         workingLink.put(nic.getNSAP(),-1);
-        int[][] graph = create2dGraph(Nodes);
         while(!workingDistance.isEmpty()){
             int min = Integer.MAX_VALUE;
             int index = -1;
@@ -305,21 +290,6 @@ public class LinkStateRouter extends Router {
         for (int i = 0; i < size; i++) {
             nic.sendOnLink(i,(DijPack)(DP.clone()));
         }
-    }
-
-    // converts Wholetable hasmap to 2D array for Dijkstra's algorithm
-    public synchronized int[][] create2dGraph(Integer[] Nodes){
-        Integer[] nodes =Nodes;
-        Arrays.sort(nodes);
-        int[][] graph = new int[nodes.length][nodes.length];
-        for(int i =0;i<nodes.length;i++){
-            Collection<Integer> neighbours = ((HashMap) (WholeTable.get(nodes[i]).get(1))).keySet();
-            for(int v: neighbours){
-                int val = Arrays.asList(nodes).indexOf(v);
-                graph[i][val] =((Long) ((HashMap) (WholeTable.get(nodes[i]).get(1))).get(v)).intValue();
-            }
-        }
-        return graph;
     }
 
     // bulids a table with the router that it is sending to next
