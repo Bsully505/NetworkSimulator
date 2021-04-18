@@ -6,14 +6,16 @@ public class DijkstraAlg {
 
     // variables
 // V stand for the number of vertices
-    int V = 0;
-
+    static int  V = 0;
     // allows us to tell the alg how many vertices there is.
-    public DijkstraAlg(int x) {
+
+    public static void addValuesforDijkstraAlg(int x)
+    {
+
         V = x;
     }
 
-    int minDistance(int dist[], Boolean sptSet[])
+    static int minDistance(int dist[], Boolean sptSet[])
 
     // finds the minimum distance value from the set of vertices given
     {
@@ -30,7 +32,7 @@ public class DijkstraAlg {
     }
 
 // method that does the dijkstra alg. Takes in a graph and the source
-    public void dijkstra(int graph[][], int src) {
+    public static void dijkstra(int graph[][], int src) {
 
         int dist[] = new int[V]; // The output array. dist[i] will hold
         // the shortest distance from src to i
@@ -54,6 +56,7 @@ public class DijkstraAlg {
             // not yet processed. u is always equal to src in first
             // iteration.
             int u = minDistance(dist, sptSet);
+            System.out.println("the shortest for this is "+u+ " for "+ dist[u]);
 
             // Mark the picked vertex as processed
             sptSet[u] = true;
@@ -75,13 +78,13 @@ public class DijkstraAlg {
 
 
     // method to print the solution of the distance
-    public void printSolution(int dist[]) {
+    public static void printSolution(int dist[]) {
         System.out.println("Vertex \t\t Distance from Source");
         for (int i = 0; i < V; i++)
             System.out.println(i + " \t\t " + dist[i]);
     }
 
-    ;
+
 
 
 }
